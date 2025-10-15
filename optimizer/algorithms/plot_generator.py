@@ -65,14 +65,45 @@ class PlotGenerator:
         
         fig.update_layout(updatemenus=[dict(active=0, buttons=buttons, x=0.01, xanchor="left", y=0.99, yanchor="top")])
         fig.update_layout(title=f'Visualisasi Rute Interaktif - {label}', mapbox_style="carto-positron", mapbox_center_lon=np.mean([c[0] for c in customers]), mapbox_center_lat=np.mean([c[1] for c in customers]), mapbox_zoom=10, margin={"r":0,"t":40,"l":0,"b":0})
-        fig.show()
+        return fig.to_dict()
         
     def plot_final_comparison(results, labels):
-        distances = [res.get('best_value', 0) if res.get('best_value', float('inf')) < 900000 else 0 for res in results]
+        distances = [res.get('best_value', 0) if res.get('best_value', float('inf')) < 900000 else 0 
+                     for res in results]
         times = [res.get('time', 0) for res in results]
-        fig = go.Figure(data=[go.Bar(name='Jarak', x=labels, y=distances, text=[f"{d:.2f}" for d in distances], textposition='auto')])
-        fig.update_layout(title_text='Perbandingan Final Total Jarak', yaxis_title='Total Jarak (km)')
-        fig.show()
-        fig = go.Figure(data=[go.Bar(name='Waktu', x=labels, y=times, text=[f"{t:.2f}" for t in times], textposition='auto')])
-        fig.update_layout(title_text='Perbandingan Waktu Komputasi', yaxis_title='Waktu Komputasi (detik)')
-        fig.show()
+        
+        # Distance comparison
+        fig_distance = go.Figure(data=[
+            go.Bar(
+                name='Jarak', 
+                x=labels, 
+                y=distances, 
+                text=[f"{d:.2f}" for d in distances], 
+                textposition='auto',
+                marker_color='#030213'
+            )
+        ])
+        fig_distance.update_layout(
+            title_text='Perbandingan Total Jarak',
+            yaxis_title='Total Jarak (km)',
+            showlegend=False
+        )
+        
+        # Time comparison
+        fig_time = go.Figure(data=[
+            go.Bar(
+                name='Waktu', 
+                x=labels, 
+                y=times, 
+                text=[f"{t:.2f}" for t in times], 
+                textposition='auto',
+                marker_color='#6366f1'
+            )
+        ])
+        fig_time.update_layout(
+            title_text='Perbandingan Waktu Komputasi',
+            yaxis_title='Waktu Komputasi (detik)',
+            showlegend=False
+        )
+        
+        return fig_distance.to_dict(), fig_time.to_dict()
