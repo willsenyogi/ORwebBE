@@ -3,7 +3,7 @@ import plotly.express as px
 import plotly.io as pio
 import pandas as pd
 import numpy as np
-from utils import DistanceMatrix, HeuristicFunctions
+from .utils import DistanceMatrix, HeuristicFunctions
 
 class PlotGenerator:
     def plot_solution_with_dropdown(result, label, depots, customers, Dcust, vehicle_depot_map):
@@ -25,8 +25,6 @@ class PlotGenerator:
             cust_df = pd.DataFrame([customers[i] for i in cust_list], columns=['lon', 'lat'])
             cust_df['id'] = [f"C{i}" for i in cust_list]
             
-            # --- PERBAIKAN BUG DI SINI ---
-            # Menggunakan .astype(str) untuk memastikan penggabungan string yang aman
             hover_text = cust_df['id'].astype(str) + f" → Vehicle {v_idx} (from D{home_depot_idx})"
             
             fig.add_trace(go.Scattermapbox(

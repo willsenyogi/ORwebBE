@@ -1,7 +1,7 @@
 import time
 import gurobipy as gp
 from gurobipy import GRB
-from utils import DistanceMatrix
+from .utils import DistanceMatrix
 # ------------------------------------
 # ILP implementation using Gurobi
 # ------------------------------------

@@ -3,7 +3,7 @@ import random
 import copy
 import gurobipy as gp
 from gurobipy import GRB
-from utils import DistanceMatrix, HeuristicFunctions
+from .utils import DistanceMatrix, HeuristicFunctions
 import numpy as np
 
 # -----------------------------
