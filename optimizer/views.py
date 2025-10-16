@@ -74,9 +74,15 @@ class OptimizeView(APIView):
 
         ga_plot = PlotGenerator.plot_solution_with_dropdown(res_ga, "GA", depots, customers, Dcust, vehicle_depot_map)
 
+        res_pso['plot'] = pso_plot
+        res_ga['plot'] = ga_plot
+
         response = {
-            "PSO": res_pso,
-            "GA" : res_ga
+            "success" : True,
+            "data": {
+                "pso": res_pso,
+                "ga" : res_ga
+            }
         }
         return Response(response, status=200)
         
