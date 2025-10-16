@@ -88,6 +88,7 @@ class HeuristicFunctions():
     
 class RoutesPrinter:
     def print_routes(result, label, depots, customers, customer_demands, vehicle_depot_map, vehicle_capacities, Dcust):
+        heuristic = HeuristicFunctions()
         assign = result.get("best_assignment", [])
         total_dist = result.get("best_value", float('inf'))
         comp_time = result.get("time", 0)
@@ -120,7 +121,7 @@ class RoutesPrinter:
                 cust_list = vehicle_groups[v_idx]
                 if cust_list:
                     home_depot_coords = depots[d_idx]
-                    route, dist = HeuristicFunctions.build_route_and_length(home_depot_coords, cust_list, customers, Dcust)
+                    route, dist = heuristic.build_route_and_length(home_depot_coords, cust_list, customers, Dcust)
                     
                     total_demand = sum(customer_demands[c] for c in cust_list)
                     current_vehicle_capacity = vehicle_capacities[v_idx]

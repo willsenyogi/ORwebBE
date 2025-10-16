@@ -4,6 +4,7 @@ import plotly.io as pio
 import pandas as pd
 import numpy as np
 from .utils import DistanceMatrix, HeuristicFunctions
+heuristic = HeuristicFunctions()
 
 class PlotGenerator:
     def plot_solution_with_dropdown(result, label, depots, customers, Dcust, vehicle_depot_map):
@@ -34,7 +35,7 @@ class PlotGenerator:
                 name=f'Route V{v_idx}'
             ))
             
-            route, _ = HeuristicFunctions.build_route_and_length(depot_coord, cust_list, customers, Dcust)
+            route, _ = heuristic.build_route_and_length(depot_coord, cust_list, customers, Dcust)
             path_lon, path_lat, route_texts, route_df = [], [], [], pd.DataFrame(columns=['lon', 'lat'])
             if route:
                 path_coords = [depot_coord] + [customers[i] for i in route] + [depot_coord]

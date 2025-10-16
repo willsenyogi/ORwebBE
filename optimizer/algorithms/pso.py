@@ -5,6 +5,8 @@ from gurobipy import GRB
 from .utils import DistanceMatrix, HeuristicFunctions
 import numpy as np
 
+heuristic = HeuristicFunctions()
+
 # -----------------------------
 # PSO implementation
 # -----------------------------
@@ -41,7 +43,7 @@ class ParticleSwarmOptimization:
                 total_penalty += 999999 + (current_demand - self.vehicle_capacities[vehicle_idx]) * 1000
 
             home_depot_idx = self.vehicle_depot_map[vehicle_idx]; home_depot_coords = self.depots[home_depot_idx]
-            _, route_dist = HeuristicFunctions.build_route_and_length(home_depot_coords, assigned_cust_indices, self.customers, self.customer_distance_matrix)
+            _, route_dist = heuristic.build_route_and_length(home_depot_coords, assigned_cust_indices, self.customers, self.customer_distance_matrix)
             total_distance += route_dist
         return total_distance + total_penalty
     
