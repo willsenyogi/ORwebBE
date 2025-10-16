@@ -8,10 +8,10 @@ from .algorithms.pso import ParticleSwarmOptimization
 from .algorithms.ga import GeneticAlgorithm
 
 from .algorithms.plot_generator import PlotGenerator
-from .algorithms.utils import HaversineFormulation, DistanceMatrix
+from .algorithms.utils import HaversineFormulation, DistanceMatrix, RoutesPrinter
 
 class OptimizeView(APIView):
-    def get(self, request):
+    def post(self, request):
         run_ilp = request.query_params.get('run_ilp', False)
         data = request.data
         
@@ -33,11 +33,12 @@ class OptimizeView(APIView):
             
         if run_ilp == True:
             ilp=SolverILP(
-                depots=depots,
+                depots=depots, 
                 customers=customers,
                 vehicles_per_depot=vehicles_per_depot,
                 vehicle_capacities=vehicle_capacities,
-                customer_demands=customer_demands
+                customer_demands=customer_demands,
+                time_limit=72000
             )
             
             res_ilp=ilp.run(verbose=True, run_ilp=run_ilp)
@@ -45,11 +46,10 @@ class OptimizeView(APIView):
             all_labels.append("ILP")
 
         pso=ParticleSwarmOptimization(
-            depots=depots,
-            customers=customers,
-            vehicles_per_depot=vehicles_per_depot,
-            vehicle_capacities=vehicle_capacities,
-            customer_demands=customer_demands
+            depots=depots, customers=customers, vehicles_per_depot=vehicles_per_depot, 
+            vehicle_capacities=vehicle_capacities, 
+            customer_demands=customer_demands, 
+            pop_size=100, iters=100, seed=None
         )
         
         res_pso=pso.run(verbose=True)
@@ -57,11 +57,10 @@ class OptimizeView(APIView):
         all_labels.append("PSO")
 
         ga=GeneticAlgorithm(
-            depots=depots,
-            customers=customers,
-            vehicles_per_depot=vehicles_per_depot,
-            vehicle_capacities=vehicle_capacities,
-            customer_demands=customer_demands
+            depots=depots, customers=customers, vehicles_per_depot=vehicles_per_depot, 
+            vehicle_capacities=vehicle_capacities, 
+            customer_demands=customer_demands, 
+            pop_size=100, iters=100, seed=None
         )
         
         res_ga=ga.run(verbose=True)
@@ -69,16 +68,17 @@ class OptimizeView(APIView):
         all_labels.append("GA")
 
         if run_ilp == True:
-            ilp_plot = PlotGenerator.plot_solution_with_dropdown(res_ilp, "ILP", depots, customers, customer_demands, vehicle_depot_map)
+            PlotGenerator.plot_solution_with_dropdown(res_ilp, "ILP (Optimal Value)", depots, customers, Dcust, vehicle_depot_map)
 
-        pso_plot = PlotGenerator.plot_solution_with_dropdown(res_pso, "PSO", depots, customers, customer_demands, vehicle_depot_map)
+        pso_plot = PlotGenerator.plot_solution_with_dropdown(res_pso, "PSO", depots, customers, Dcust, vehicle_depot_map)
 
-        ga_plot = PlotGenerator.plot_solution_with_dropdown(res_ga, "GA", depots, customers, customer_demands, vehicle_depot_map)
+        ga_plot = PlotGenerator.plot_solution_with_dropdown(res_ga, "GA", depots, customers, Dcust, vehicle_depot_map)
 
         response = {
-            
+            "PSO": res_pso,
+            "GA" : res_ga
         }
-        return Response({"result": "result"}, status=200)
+        return Response(response, status=200)
         
 
 
