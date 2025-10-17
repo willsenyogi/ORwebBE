@@ -46,25 +46,23 @@ class OptimizeView(APIView):
         vehicle_depot_map = [idx for idx, num in enumerate(vehicles_per_depot) for _ in range(num)]
         Dcust = DistanceMatrix.build_distance_matrix(customers)
         all_results, all_labels = [], []
-
-        if run_ilp == 'True':
-            run_ilp = True
-        else:
-            run_ilp = False
-            
+        
         if run_ilp == True:
-            ilp=SolverILP(
-                depots=depots, 
-                customers=customers,
-                vehicles_per_depot=vehicles_per_depot,
-                vehicle_capacities=vehicle_capacities,
-                customer_demands=customer_demands,
-                time_limit=72000
-            )
-            
-            res_ilp=ilp.run(verbose=True, run_ilp=run_ilp)
-            all_results.append(res_ilp)
-            all_labels.append("ILP")
+            try:
+                ilp=SolverILP(
+                    depots=depots, 
+                    customers=customers,
+                    vehicles_per_depot=vehicles_per_depot,
+                    vehicle_capacities=vehicle_capacities,
+                    customer_demands=customer_demands,
+                    time_limit=72000
+                )
+                
+                res_ilp=ilp.run(verbose=True, run_ilp=run_ilp)
+                all_results.append(res_ilp)
+                all_labels.append("ILP")
+            except MemoryError as ex:
+                return Response({"error": "Memory Error"}, status=400)
 
         pso=ParticleSwarmOptimization(
             depots=depots, customers=customers, vehicles_per_depot=vehicles_per_depot, 
