@@ -12,14 +12,35 @@ from .algorithms.utils import HaversineFormulation, DistanceMatrix, RoutesPrinte
 
 class OptimizeView(APIView):
     def post(self, request):
-        run_ilp = request.query_params.get('run_ilp', False)
         data = request.data
-        
+
+        print(data)
+
+        # Body Data (Depots, Customers, Vehicles per Depot, Vehicle Capacities, Customer Demands)
         depots = data['depots']
         customers = data['customers']
         vehicles_per_depot = data['vehicle_per_depot']
-        vehicle_capacities = data['vehichle_capacities']
+        vehicle_capacities = data['vehicle_capacities']
         customer_demands = data['customer_demands']
+
+        # Hyperparameters
+        hyperparams = data.get('parameters')
+
+        # Gurobi toggle
+        run_ilp = hyperparams['run_ilp']
+
+        # Max iterations and population size
+        iters = hyperparams['maxIterations']
+        pop_size = hyperparams['populationSize']
+
+        # PSO Hyperparameters
+        c1 = hyperparams.get('pso_c1')
+        c2 = hyperparams.get('pso_c2')
+        w = hyperparams.get('pso_w')
+
+        # GA Hyperparameters
+        mutation_rate = hyperparams.get('ga_mutation_prob')
+        crossover_rate = hyperparams.get('ga_crossover_prob')
 
         total_vehicles = sum(vehicles_per_depot)
         vehicle_depot_map = [idx for idx, num in enumerate(vehicles_per_depot) for _ in range(num)]
@@ -49,7 +70,8 @@ class OptimizeView(APIView):
             depots=depots, customers=customers, vehicles_per_depot=vehicles_per_depot, 
             vehicle_capacities=vehicle_capacities, 
             customer_demands=customer_demands, 
-            pop_size=100, iters=100, seed=None
+            pop_size=pop_size, iters=iters, seed=None,
+            c1=c1, c2=c2, w=w
         )
         
         res_pso=pso.run(verbose=True)
@@ -60,7 +82,8 @@ class OptimizeView(APIView):
             depots=depots, customers=customers, vehicles_per_depot=vehicles_per_depot, 
             vehicle_capacities=vehicle_capacities, 
             customer_demands=customer_demands, 
-            pop_size=100, iters=100, seed=None
+            pop_size=pop_size, iters=iters, seed=None,
+            cx_prob=crossover_rate, mut_prob=mutation_rate
         )
         
         res_ga=ga.run(verbose=True)

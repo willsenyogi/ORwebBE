@@ -17,8 +17,8 @@ class ParticleSwarmOptimization:
         self.total_vehicles = sum(self.vehicles_per_depot)
         self.vehicle_depot_map = [idx for idx, num in enumerate(self.vehicles_per_depot) for _ in range(num)]
         self.pop_size, self.w, self.c1, self.c2, self.iters = pop_size, w, c1, c2, iters
-        self.v_max = 0.5  # Batas kecepatan maksimum
-        self.v_min = -0.5 # Batas kecepatan minimum
+        self.v_max = 0.5
+        self.v_min = -0.5
         if seed is not None: np.random.seed(seed); random.seed(seed)
         self.customer_distance_matrix = DistanceMatrix.build_distance_matrix(customers)
         self.positions = np.random.uniform(-1, 1, size=(pop_size, self.n, self.total_vehicles))
