@@ -98,13 +98,23 @@ class OptimizeView(APIView):
         res_pso['plot'] = pso_plot
         res_ga['plot'] = ga_plot
 
-        response = {
-            "success" : True,
-            "data": {
-                "pso": res_pso,
-                "ga" : res_ga
+        if run_ilp == True:
+            response = {
+                "success" : True,
+                "data": {
+                    "ilp" : res_ilp,
+                    "pso": res_pso,
+                    "ga" : res_ga
+                }
             }
-        }
+        else:    
+            response = {
+                "success" : True,
+                "data": {
+                    "pso": res_pso,
+                    "ga" : res_ga
+                }
+            }
         return Response(response, status=200)
         
 
