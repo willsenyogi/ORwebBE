@@ -2,6 +2,7 @@ import time
 import gurobipy as gp
 from gurobipy import GRB
 from .utils import DistanceMatrix
+from pathlib import Path
 # ------------------------------------
 # ILP implementation using Gurobi
 # ------------------------------------
@@ -42,7 +43,7 @@ class SolverILP:
             # model.setParam('NodefileStart', 0.7)
             # model.setParam('TimeLimit', self.time_limit)
             model.Params.NodefileStart = 0.5
-            model.Params.NodefileDir = "/tmp"
+            model.Params.NodefileDir = str(Path.home() / "Desktop" / "gurobi_tmp")
             model.Params.Cuts = 1
             model.Params.Presolve = 2
             model.Params.Aggregate = 2
