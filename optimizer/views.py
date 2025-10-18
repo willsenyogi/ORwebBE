@@ -89,7 +89,7 @@ class OptimizeView(APIView):
         all_labels.append("GA")
 
         if run_ilp == True:
-            PlotGenerator.plot_solution_with_dropdown(res_ilp, "ILP (Optimal Value)", depots, customers, Dcust, vehicle_depot_map)
+            ilp_plot=PlotGenerator.plot_solution_with_dropdown(res_ilp, "ILP (Optimal Value)", depots, customers, Dcust, vehicle_depot_map)
 
         pso_plot = PlotGenerator.plot_solution_with_dropdown(res_pso, "PSO", depots, customers, Dcust, vehicle_depot_map)
 
@@ -99,6 +99,40 @@ class OptimizeView(APIView):
         res_ga['plot'] = ga_plot
 
         if run_ilp == True:
+            res_ilp['plot'] = ilp_plot
+            RoutesPrinter.print_routes(
+                result=res_ilp,
+                label="ILP (Optimal Value)",
+                depots=depots,
+                customers=customers,
+                customer_demands=customer_demands,
+                vehicle_depot_map=vehicle_depot_map,
+                vehicle_capacities=vehicle_capacities,
+                Dcust=Dcust
+            )
+            
+            RoutesPrinter.print_routes(
+                result=res_pso,
+                label="PSO",
+                depots=depots,
+                customers=customers,
+                customer_demands=customer_demands,
+                vehicle_depot_map=vehicle_depot_map,
+                vehicle_capacities=vehicle_capacities,
+                Dcust=Dcust
+            )
+            
+            RoutesPrinter.print_routes(
+                result=res_ga,
+                label="GA",
+                depots=depots,
+                customers=customers,
+                customer_demands=customer_demands,
+                vehicle_depot_map=vehicle_depot_map,
+                vehicle_capacities=vehicle_capacities,
+                Dcust=Dcust
+            )
+            
             response = {
                 "success" : True,
                 "data": {
@@ -107,7 +141,28 @@ class OptimizeView(APIView):
                     "ga" : res_ga
                 }
             }
-        else:    
+        else:
+            RoutesPrinter.print_routes(
+                result=res_pso,
+                label="PSO",
+                depots=depots,
+                customers=customers,
+                customer_demands=customer_demands,
+                vehicle_depot_map=vehicle_depot_map,
+                vehicle_capacities=vehicle_capacities,
+                Dcust=Dcust
+            )
+            
+            RoutesPrinter.print_routes(
+                result=res_ga,
+                label="GA",
+                depots=depots,
+                customers=customers,
+                customer_demands=customer_demands,
+                vehicle_depot_map=vehicle_depot_map,
+                vehicle_capacities=vehicle_capacities,
+                Dcust=Dcust
+            )    
             response = {
                 "success" : True,
                 "data": {
