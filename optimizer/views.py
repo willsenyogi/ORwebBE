@@ -96,10 +96,13 @@ class OptimizeView(APIView):
         ga_plot = PlotGenerator.plot_solution_with_dropdown(res_ga, "GA", depots, customers, Dcust, vehicle_depot_map)
 
         res_pso['plot'] = pso_plot
+        res_pso['vehicle_depot_map'] = vehicle_depot_map
         res_ga['plot'] = ga_plot
+        res_ga['vehicle_depot_map'] = vehicle_depot_map
 
         if run_ilp == True:
             res_ilp['plot'] = ilp_plot
+            res_ilp['vehicle_depot_map'] = vehicle_depot_map
             RoutesPrinter.print_routes(
                 result=res_ilp,
                 label="ILP (Optimal Value)",
