@@ -93,11 +93,12 @@ class RoutesPrinter:
         total_dist = result.get("best_value", float('inf'))
         comp_time = result.get("time", 0)
 
+        # Check for failure (no assignment or -1 in assignment)
         if not assign or -1 in assign:
             print(f"\n--- {label} FAILED OR DID NOT FIND A VALID SOLUTION ---")
             print(f"{label} computation time = {comp_time:.4f} s")
             return
-        
+            
         vehicle_groups = {v_idx: [] for v_idx in range(len(vehicle_depot_map))}
         for cust_idx, vehicle_idx in enumerate(assign):
             vehicle_groups[vehicle_idx].append(cust_idx)
@@ -107,26 +108,31 @@ class RoutesPrinter:
             depot_vehicle_groups[d_idx].append(v_idx)
         
         print(f"\n--- {label} BEST ROUTE DETAILS ---")
-        print(f"{label} total distance = {total_dist:.4f} km")
+        
+        if total_dist > 900000:
+            print(f"{label} total fitness (with penalty) = {total_dist:.4f}")
+        else:
+            print(f"{label} total distance = {total_dist:.4f} km")
+        
         print(f"{label} computation time = {comp_time:.4f} s")
 
         for d_idx in sorted(depot_vehicle_groups.keys()):
-            print(f"\n  Depot {d_idx}:")
+            print(f"\n  Depot {d_idx + 1}:")
             depot_vehicles = depot_vehicle_groups[d_idx]
-            if not any(vehicle_groups[v_idx] for v_idx in depot_vehicles):
+            
+            if not any(vehicle_groups.get(v_idx) for v_idx in depot_vehicles):
                 print("    - No vehicles used from this depot.")
                 continue
                 
             for v_idx in depot_vehicles:
-                cust_list = vehicle_groups[v_idx]
+                cust_list = vehicle_groups.get(v_idx, [])
                 if cust_list:
                     home_depot_coords = depots[d_idx]
                     route, dist = heuristic.build_route_and_length(home_depot_coords, cust_list, customers, Dcust)
-                    
                     total_demand = sum(customer_demands[c] for c in cust_list)
                     current_vehicle_capacity = vehicle_capacities[v_idx]
-                    
-                    route_str = str(route) if len(route) < 10 else f"[{route[0]}, ..., {route[-1]}]"
-                    print(f"    - Vehicle {v_idx}: serves {len(cust_list)} customers (Demand: {total_demand}/{current_vehicle_capacity}) -> route {route_str} -> dist {dist:.2f} km")
+                    route_display = [c + 1 for c in route]
+                    route_str = str(route_display) if len(route_display) < 10 else f"[{route_display[0]}, ..., {route_display[-1]}]"
+                    print(f"    - Vehicle {v_idx + 1}: serves {len(cust_list)} customers (Demand: {total_demand}/{current_vehicle_capacity}) -> route {route_str} -> dist {dist:.2f} km")
                 else:
-                    print(f"    - Vehicle {v_idx}: Not used.")
+                    print(f"    - Vehicle {v_idx + 1}: Not used.")
