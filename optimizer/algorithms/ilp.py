@@ -3,45 +3,129 @@ import gurobipy as gp
 from gurobipy import GRB
 from .utils import DistanceMatrix
 from pathlib import Path
-# ------------------------------------
-# ILP implementation using Gurobi
-# ------------------------------------
+
 class SolverILP:
     def __init__(self, depots, customers, vehicles_per_depot, vehicle_capacities, customer_demands, time_limit=60):
-        self.depots, self.customers, self.vehicles_per_depot, self.vehicle_capacities, self.customer_demands = depots, customers, vehicles_per_depot, vehicle_capacities, customer_demands
-        self.m, self.n = len(depots), len(customers)
+        self.depots = depots
+        self.customers = customers
+        self.vehicles_per_depot = vehicles_per_depot
+        self.vehicle_capacities = vehicle_capacities
+        self.customer_demands = customer_demands
+        self.m = len(depots)
+        self.n = len(customers)
         self.time_limit = time_limit
-        self.total_vehicles = sum(self.vehicles_per_depot)
+        self.total_vehicles = sum(vehicles_per_depot)
         self.vehicle_depot_map = [idx for idx, num in enumerate(self.vehicles_per_depot) for _ in range(num)]
 
     def run(self, verbose=False, run_ilp=True):
         if run_ilp == True:
             start = time.time()
-            all_points = self.depots + self.customers; num_points = len(all_points)
+            all_points = self.depots + self.customers
+            num_points = len(all_points)
             dist_matrix = DistanceMatrix.build_distance_matrix(all_points)
             full_demands = [0] * self.m + self.customer_demands
-            depot_indices, customer_indices, vehicle_indices = list(range(self.m)), list(range(self.m, num_points)), list(range(self.total_vehicles))
-            model = gp.Model("MDVRP_ILP_Dynamic_Capacity")
-            if not verbose: model.setParam('OutputFlag', 0)
-            x = model.addVars(num_points, num_points, self.total_vehicles, vtype=GRB.BINARY, name="x")
-            u = model.addVars(num_points, self.total_vehicles, vtype=GRB.CONTINUOUS, name="u")
-            model.setObjective(gp.quicksum(dist_matrix[i, j] * x[i, j, k] for i in range(num_points) for j in range(num_points) for k in vehicle_indices if i != j), GRB.MINIMIZE)
-            for j in customer_indices: model.addConstr(gp.quicksum(x[i, j, k] for i in range(num_points) for k in vehicle_indices if i != j) == 1)
-            for k in vehicle_indices: model.addConstr(gp.quicksum(x[self.vehicle_depot_map[k], j, k] for j in customer_indices) <= 1)
-            for k in vehicle_indices:
-                for j in customer_indices: model.addConstr(gp.quicksum(x[i, j, k] for i in range(num_points) if i != j) == gp.quicksum(x[j, i, k] for i in range(num_points) if i != j))
-            for k in vehicle_indices: model.addConstr(gp.quicksum(x[self.vehicle_depot_map[k], j, k] for j in customer_indices) == gp.quicksum(x[j, self.vehicle_depot_map[k], k] for j in customer_indices))
-            for k in vehicle_indices:
-                for i in range(num_points):
-                    for j in customer_indices:
-                        if i != j: model.addConstr((x[i, j, k] == 1) >> (u[i, k] + full_demands[j] == u[j, k]))
-            for k in vehicle_indices:
-                for i in customer_indices:
-                    model.addConstr(u[i, k] >= full_demands[i])
-                    model.addConstr(u[i, k] <= self.vehicle_capacities[k])
-            
-            # model.setParam('NodefileStart', 0.7)
-            # model.setParam('TimeLimit', self.time_limit)
+
+            depot_indices = list(range(self.m))
+            customer_indices = list(range(self.m, num_points))
+
+            model = gp.Model("MDVRP_ILP")
+            if not verbose:
+                model.setParam('OutputFlag', 0)
+
+            # Decision variables
+            x = model.addVars(num_points, num_points, self.m, max(self.vehicles_per_depot), vtype=GRB.BINARY, name="x")
+            y = model.addVars(num_points, self.m, max(self.vehicles_per_depot), vtype=GRB.BINARY, name="y")
+            u = model.addVars(num_points, self.m, max(self.vehicles_per_depot), vtype=GRB.CONTINUOUS, name="u")
+
+            # Objective: minimize total distance
+            model.setObjective(
+                gp.quicksum(dist_matrix[i, j] * x[i, j, m, k]
+                            for m in depot_indices
+                            for k in range(self.vehicles_per_depot[m])
+                            for i in range(num_points)
+                            for j in range(num_points)
+                            if i != j),
+                GRB.MINIMIZE
+            )
+
+            # (2.2) Vehicle capacity constraint
+            vehicle_offset = 0  # Lacak indeks global kendaraan
+            for m in depot_indices:
+                for k in range(self.vehicles_per_depot[m]):
+                    global_k = vehicle_offset + k  # Ini adalah indeks yang benar untuk vehicle_capacities
+                    
+                    model.addConstr(
+                        gp.quicksum(full_demands[i] * y[i, m, k] for i in customer_indices) <= self.vehicle_capacities[global_k], # <-- GUNAKAN global_k
+                        name=f"capacity_m{m}_k{k}"
+                    )
+                vehicle_offset += self.vehicles_per_depot[m] # Tambahkan jumlah kendaraan di depot ini ke offset
+
+            # (2.6) Each customer served exactly once
+            for i in customer_indices:
+                model.addConstr(
+                    gp.quicksum(y[i, m, k] for m in depot_indices for k in range(self.vehicles_per_depot[m])) == 1,
+                    name=f"serve_once_i{i}"
+                )
+
+            # (2.4) Total customers served by vehicles = total customers served by depot
+            for m in depot_indices:
+                model.addConstr(
+                    gp.quicksum(y[i, m, k] for k in range(self.vehicles_per_depot[m]) for i in customer_indices) >= 1,
+                    name=f"depot_has_customer_m{m}"
+                )
+
+            # (Flow consistency + linking x↔y)
+            for m in depot_indices:
+                for k in range(self.vehicles_per_depot[m]):
+                    # Flow balance for customers
+                    for i in customer_indices:
+                        model.addConstr(
+                            gp.quicksum(x[i, j, m, k] for j in range(num_points) if j != i) == y[i, m, k],
+                            name=f"link_out_m{m}_k{k}_i{i}"
+                        )
+                        model.addConstr(
+                            gp.quicksum(x[j, i, m, k] for j in range(num_points) if j != i) == y[i, m, k],
+                            name=f"link_in_m{m}_k{k}_i{i}"
+                        )
+
+                    # Vehicle must leave and return to its own depot
+                    depot_node = m
+                    model.addConstr(
+                        gp.quicksum(x[depot_node, j, m, k] for j in customer_indices) ==
+                        gp.quicksum(x[j, depot_node, m, k] for j in customer_indices),
+                        name=f"depot_flow_m{m}_k{k}"
+                    )
+
+            # Subtour elimination (using u variables)
+            vehicle_offset_mtz = 0
+            for m in depot_indices:
+                for k in range(self.vehicles_per_depot[m]):
+                    global_k = vehicle_offset_mtz + k 
+                    current_capacity = self.vehicle_capacities[global_k]
+
+                    for i in customer_indices:
+                        model.addConstr(u[i, m, k] >= full_demands[i])
+                        model.addConstr(u[i, m, k] <= current_capacity)
+                        for j in customer_indices:
+                            if i != j:
+                                model.addConstr(
+                                    u[i, m, k] + full_demands[j] - u[j, m, k]
+                                    <= current_capacity * (1 - x[i, j, m, k]),
+                                    name=f"mtz_m{m}_k{k}_i{i}_j{j}"
+                                )
+                vehicle_offset_mtz += self.vehicles_per_depot[m]
+
+            # (Crucial!) prevent cross-depot vehicle movement
+            for m in depot_indices:
+                for k in range(self.vehicles_per_depot[m]):
+                    for d in depot_indices:
+                        if d != m:
+                            for j in range(num_points):
+                                if j != d:
+                                    model.addConstr(x[d, j, m, k] == 0)
+                                    model.addConstr(x[j, d, m, k] == 0)
+
+            # Model params
             model.Params.NodefileStart = 0.5
             model.Params.NodefileDir = str(Path.home() / "Desktop" / "gurobi_tmp")
             model.Params.Cuts = 1
@@ -49,16 +133,75 @@ class SolverILP:
             model.Params.Aggregate = 2
             model.Params.PreCrush = 1
             model.Params.MIPGap = 0.0
+            # model.Params.TimeLimit = self.time_limit
+
             model.optimize()
             end = time.time()
+
+            # Extract solution
             best_assignment = [-1] * self.n
             best_value = model.ObjVal if model.Status in [GRB.OPTIMAL, GRB.TIME_LIMIT, GRB.SUBOPTIMAL] else float('inf')
+            best_routes_ilp = {}
+
             if best_value < float('inf'):
-                solution = model.getAttr('x', x)
-                for i in range(num_points):
-                    for j in customer_indices:
-                        for k in vehicle_indices:
-                            if solution[i, j, k] > 0.5:
-                                customer_idx_in_list = j - self.m
-                                best_assignment[customer_idx_in_list] = k
-            return {"best_assignment": best_assignment, "best_value": best_value, "time": end - start, "history": []}
+                solution_x = model.getAttr('x', x)
+                global_vehicle_idx = 0
+                for m in depot_indices:
+                    depot_node = m
+                    for k in range(self.vehicles_per_depot[m]):
+                        
+                        vehicle_route = [] # Urutan customer index (0-based)
+                        vehicle_dist = 0.0
+                        
+                        # 1. Cari node pertama setelah depot
+                        current_node = depot_node
+                        for j in customer_indices:
+                            if solution_x[current_node, j, m, k] > 0.5:
+                                cust_idx = j - self.m
+                                vehicle_route.append(cust_idx)
+                                vehicle_dist += dist_matrix[current_node, j]
+                                current_node = j
+                                best_assignment[cust_idx] = global_vehicle_idx # Isi assignment
+                                break # Temukan pelanggan pertama
+
+                        # 2. Lacak sisa rute sampai kembali ke depot
+                        while current_node != depot_node:
+                            found_next = False
+                            # Cari node berikutnya (bisa customer lain atau depot)
+                            for j in range(num_points): 
+                                if j != current_node and solution_x[current_node, j, m, k] > 0.5:
+                                    vehicle_dist += dist_matrix[current_node, j]
+                                    
+                                    if j in customer_indices:
+                                        cust_idx = j - self.m
+                                        vehicle_route.append(cust_idx)
+                                        best_assignment[cust_idx] = global_vehicle_idx # Isi assignment
+                                        current_node = j
+                                    else:
+                                        # Pasti kembali ke depot (j == depot_node)
+                                        current_node = depot_node
+                                    
+                                    found_next = True
+                                    break
+                            
+                            if not found_next:
+                                # Ini berarti kendaraan tidak digunakan atau rutenya rusak
+                                # (Jika kendaraan digunakan, ini seharusnya tidak terjadi)
+                                break
+                                
+                        # Simpan rute jika valid
+                        if vehicle_route:
+                            best_routes_ilp[global_vehicle_idx] = {
+                                'route': vehicle_route,
+                                'dist': vehicle_dist
+                            }
+                        
+                        global_vehicle_idx += 1
+
+            return {
+                "best_assignment": best_assignment, # Tetap ada untuk kompatibilitas
+                "best_value": best_value,
+                "time": end - start,
+                "history": [],
+                "best_routes_ilp": best_routes_ilp # <-- DATA BARU!
+            }

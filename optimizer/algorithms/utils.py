@@ -93,6 +93,8 @@ class RoutesPrinter:
         total_dist = result.get("best_value", float('inf'))
         comp_time = result.get("time", 0)
 
+        ilp_routes = result.get("best_routes_ilp")
+        
         # Check for failure (no assignment or -1 in assignment)
         if not assign or -1 in assign:
             print(f"\n--- {label} FAILED OR DID NOT FIND A VALID SOLUTION ---")
@@ -127,8 +129,13 @@ class RoutesPrinter:
             for v_idx in depot_vehicles:
                 cust_list = vehicle_groups.get(v_idx, [])
                 if cust_list:
-                    home_depot_coords = depots[d_idx]
-                    route, dist = heuristic.build_route_and_length(home_depot_coords, cust_list, customers, Dcust)
+                    if ilp_routes and v_idx in ilp_routes:
+                        route_data = ilp_routes[v_idx]
+                        route = route_data['route']
+                        dist = route_data['dist']
+                    else:
+                        home_depot_coords = depots[d_idx]
+                        route, dist = heuristic.build_route_and_length(home_depot_coords, cust_list, customers, Dcust)
                     total_demand = sum(customer_demands[c] for c in cust_list)
                     current_vehicle_capacity = vehicle_capacities[v_idx]
                     route_display = [c + 1 for c in route]

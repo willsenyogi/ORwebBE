@@ -9,6 +9,7 @@ heuristic = HeuristicFunctions()
 class PlotGenerator:
     def plot_solution_with_dropdown(result, label, depots, customers, Dcust, vehicle_depot_map):
         assign = result.get("best_assignment", [])
+        ilp_routes = result.get("best_routes_ilp")
         if not assign or -1 in assign or result.get("best_value", float('inf')) > 900000:
             print(f"\n--- {label} TIDAK MENEMUKAN SOLUSI LAYAK, PLOT DIBATALKAN ---")
             return {}
@@ -40,7 +41,11 @@ class PlotGenerator:
                 name=f'Route V{v_idx+1}'
             ))
             
-            route, _ = heuristic.build_route_and_length(depot_coord, cust_list, customers, Dcust)
+            if ilp_routes and v_idx in ilp_routes:
+                route_data = ilp_routes[v_idx]
+                route = route_data['route']
+            else:
+                route, _ = heuristic.build_route_and_length(depot_coord, cust_list, customers, Dcust)
             path_lon, path_lat, route_texts, route_df = [], [], [], pd.DataFrame(columns=['lon', 'lat'])
             
             if route:
