@@ -61,7 +61,7 @@ class OptimizeView(APIView):
                 res_ilp=ilp.run(verbose=True, run_ilp=run_ilp)
                 all_results.append(res_ilp)
                 all_labels.append("ILP")
-            except MemoryError as ex:
+            except Exception as ex:
                 return Response({"error": "Memory Error"}, status=400)
 
         pso=ParticleSwarmOptimization(

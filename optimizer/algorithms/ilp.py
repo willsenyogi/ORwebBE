@@ -155,11 +155,11 @@ class SolverILP:
             # ======================================================
             # Pengaturan Parameter Model Gurobi
             # ======================================================
-            model.Params.NodefileStart = 0.5
+            model.Params.NodefileStart = 0.1
             model.Params.NodefileDir = str(Path.home() / "Desktop" / "gurobi_tmp")
+            model.Params.Presolve = 1
+            model.Params.Aggregate = 1
             model.Params.Cuts = 1
-            model.Params.Presolve = 2
-            model.Params.Aggregate = 2
             model.Params.PreCrush = 1
             model.Params.MIPGap = 0.0
             # model.Params.TimeLimit = self.time_limit  # opsional
