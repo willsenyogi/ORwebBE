@@ -21,6 +21,10 @@ pip install gurobipy
 
 **gurobipy** memerlukan lisensi Gurobi yang aktif. Tanpa lisensi, model ILP tidak dapat dijalankan.
 
+## Buka Terminal Baru
+```bash
+cd ORWebBE
+```
 
 ## Menjalankan server
 ```bash
